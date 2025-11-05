@@ -7,9 +7,7 @@
     BackgroundColor="#0d6f45"
     TitleColor="White">
 
-
     <!--Верхняя панель: поиск + AI-->
-
     <Shell.TitleView>
         <Grid ColumnDefinitions="*,60" BackgroundColor="#0d6f45" HeightRequest="60">
             <!-- Поиск -->
@@ -61,9 +59,11 @@
     </Shell.FlyoutHeader>
 
     <!-- Flyout Content -->
-    <!--<Shell.FlyoutContent>
-
-    </Shell.FlyoutContent>-->
+    <Shell.FlyoutContent>
+        <ScrollView>
+            
+        </ScrollView>
+    </Shell.FlyoutContent>
 
     <ShellContent Title="Главная" ContentTemplate="{DataTemplate local:MainPage}"/>
 
