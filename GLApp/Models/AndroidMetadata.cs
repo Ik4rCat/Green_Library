@@ -1,6 +1,6 @@
 using SQLite;
 
-namespace MyApp.Models;
+namespace GLApp.Models;
 
 public class AndroidMetadata
 {
