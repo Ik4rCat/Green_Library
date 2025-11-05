@@ -1,16 +1,16 @@
 using SQLite;
 
-namespace MyApp.Models;
+namespace GLApp.Models;
 
-public class Articles
+public class Content
 {
     [PrimaryKey, AutoIncrement]
-    public int article_id { get; set; }
+    public int ArticleId { get; set; }
 
     [MaxLength(100)]
-    public string intro_text { get; set; }
+    public string IntroText { get; set; }
 
-    public string full_text { get; set; }
+    public string FullText { get; set; }
 
-    public string language { get; set; }
+    public string Language { get; set; }
 }

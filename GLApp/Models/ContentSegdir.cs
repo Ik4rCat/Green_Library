@@ -1,19 +1,19 @@
 using SQLite;
 
-namespace MyApp.Models;
+namespace GLApp.Models;
 
-public class Articles
+public class ContentSegdir
 {
     [PrimaryKey, AutoIncrement]
-    public int level { get; set; }
+    public int Level { get; set; }
 
-    public int idx { get; set; }
+    public int Idx { get; set; }
 
-    public int start_block { get; set; }
+    public int StartBlock { get; set; }
 
-    public int leaves_end_block { get; set; }
+    public int LeavesEndBlock { get; set; }
 
-    public int end_block { get; set; }
+    public int EndBlock { get; set; }
 
-    public byte[] root { get; set; }
+    public byte[] Root { get; set; }
 }

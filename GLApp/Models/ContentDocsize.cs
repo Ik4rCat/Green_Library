@@ -1,13 +1,13 @@
 using SQLite;
 
-namespace MyApp.Models;
+namespace GLApp.Models;
 
-public class Articles
+public class ContentDocsize
 {
     [PrimaryKey, AutoIncrement]
-    public int docid { get; set; }
+    public int Docid { get; set; }
 
     [MaxLength(100)]
-    public byte[] size { get; set; }
+    public byte[] Size { get; set; }
 
 }

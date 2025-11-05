@@ -1,11 +1,11 @@
 using SQLite;
 
-namespace MyApp.Models;
+namespace GLApp.Models;
 
-public class Articles
+public class ContentSegments
 {
     [PrimaryKey, AutoIncrement]
-    public int blockid { get; set; }
+    public int Blockid { get; set; }
 
-    public byte[] block { get; set; }
+    public byte[] Block { get; set; }
 }

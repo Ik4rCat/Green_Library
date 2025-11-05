@@ -1,13 +1,13 @@
 using SQLite;
 
-namespace MyApp.Models;
+namespace GLApp.Models;
 
-public class Articles
+public class Structure
 {
-    public string category { get; set; }
+    public string Category { get; set; }
 
-    public string parent { get; set; }
+    public string Parent { get; set; }
 
-    public string language { get; set; }
+    public string Language { get; set; }
 
 }

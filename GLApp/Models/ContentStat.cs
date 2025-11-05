@@ -1,11 +1,11 @@
 using SQLite;
 
-namespace MyApp.Models;
+namespace GLApp.Models;
 
-public class Articles
+public class ContentStat
 {
     [PrimaryKey, AutoIncrement]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public byte[] value { get; set; }
+    public byte[] Value { get; set; }
 }
