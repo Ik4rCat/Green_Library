@@ -6,24 +6,9 @@ namespace GLApp
     public partial class AppShell : Shell
     {
 
-
-      
-        private async void OnFilterClicked(object sender, EventArgs e)
+        public AppShell()
         {
-            if (sender is Button button && button.CommandParameter is string filterType)
-            {
-                // Преобразуем фильтр в категории
-                string category = filterType switch
-                {
-                    "Disease" => "Болезни",
-                    "Pest" => "Вредители",
-                    "Fertilizer" => "Удобрения",
-                    "All" => string.Empty,
-                    _ => string.Empty
-                };
-                await Shell.Current.GoToAsync($"categorylist?Category={category}");
-                Shell.Current.FlyoutIsPresented = false;
-            }
+            InitializeComponent();
         }
 
         private async void OnAiClicked(object sender, EventArgs e)
@@ -47,10 +32,7 @@ namespace GLApp
                 return;
             }
             var text = e.NewTextValue ?? string.Empty;
-            // Заменяем MessagingCenter на WeakReferenceMessenger
-            //WeakReferenceMessenger.Default.Send(new SearchTextChangedMessage(text));
         }
-
     }
 
 }

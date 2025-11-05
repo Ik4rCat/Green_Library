@@ -7,20 +7,30 @@
     BackgroundColor="#0d6f45"
     TitleColor="White">
 
-    <!--Верхняя панель: поиск + AI-->
+    <!-- Добавляем хотя бы один Shell Item -->
+    <FlyoutItem>
+        <ShellContent Route="MainPage" ContentTemplate="{DataTemplate local:MainPage}" />
+    </FlyoutItem>
+
+    <!-- Панель-поиска -->
     <Shell.TitleView>
-        <Grid ColumnDefinitions="*,60" BackgroundColor="#0d6f45" HeightRequest="60">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
             <!-- Поиск -->
             <SearchBar Grid.Column="0"
-                       x:Name="TopSearch"
-                       BackgroundColor="#FFFFFF"
+                       x:Name="Search"
+                       Background="#FFFFFF"
                        TextColor="#204C2C"
                        PlaceholderColor="#6B8F7B"
                        Margin="10,10"
                        CancelButtonColor="#6B8F7B"
                        TextChanged="OnSearchTextChanged"/>
 
-            <!-- Кнопка AI -->
+            <!-- Кнопка-ИИ -->
             <Border Grid.Column="1"
                     x:Name="AiButton"
                     WidthRequest="44"
@@ -34,37 +44,11 @@
                     <RoundRectangle CornerRadius="12" />
                 </Border.StrokeShape>
                 <Image Source="ai_icon.jpg" Aspect="AspectFill" />
-                <Border.GestureRecognizers>
+                <!--<Border.GestureRecognizers>
                     <TapGestureRecognizer Tapped="OnAiClicked" />
-                </Border.GestureRecognizers>
+                </Border.GestureRecognizers>-->
             </Border>
         </Grid>
     </Shell.TitleView>
-
-    <!-- Flyout Header -->
-    <Shell.FlyoutHeader>
-        <Grid BackgroundColor="#0d6f45" Padding="20,40,20,20">
-            <StackLayout Spacing="10">
-                <Label Text="🌱 Справочник Садовода" 
-                       FontSize="24" 
-                       FontAttributes="Bold" 
-                       TextColor="White" 
-                       HorizontalOptions="Center"/>
-                <Label Text="Ваш помощник в садоводстве" 
-                       FontSize="14" 
-                       TextColor="#E8F5E8" 
-                       HorizontalOptions="Center"/>
-            </StackLayout>
-        </Grid>
-    </Shell.FlyoutHeader>
-
-    <!-- Flyout Content -->
-    <Shell.FlyoutContent>
-        <ScrollView>
-            
-        </ScrollView>
-    </Shell.FlyoutContent>
-
-    <ShellContent Title="Главная" ContentTemplate="{DataTemplate local:MainPage}"/>
 
 </Shell>
