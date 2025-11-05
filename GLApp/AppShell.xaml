@@ -7,7 +7,7 @@
     BackgroundColor="#0d6f45"
     TitleColor="White">
 
-    <!-- Добавляем хотя бы один Shell Item -->
+    <!-- !Добавляем хотя бы один Shell Item! -->
     <FlyoutItem>
         <ShellContent Route="MainPage" ContentTemplate="{DataTemplate local:MainPage}" />
     </FlyoutItem>
@@ -21,6 +21,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- Поиск -->
+            <BoxView CornerRadius="40" Background="#FFFFFF" Margin="0,6,0,6"/>
             <SearchBar Grid.Column="0"
                        x:Name="Search"
                        Background="#FFFFFF"
@@ -50,5 +51,4 @@
             </Border>
         </Grid>
     </Shell.TitleView>
-
 </Shell>
