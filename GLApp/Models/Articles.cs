@@ -1,6 +1,6 @@
 using SQLite;
 
-namespace MyApp.Models;
+namespace GLApp.Models;
 
 public class Articles
 {
@@ -8,11 +8,11 @@ public class Articles
     public int Article_id { get; set; }
 
     [MaxLength(100)]
-    public string Article_name { get; set; }
+    public string? Article_name { get; set; }
 
-    public string Family { get; set; }
+    public string? Family { get; set; }
 
-    public string Category { get; set; }
+    public string? Category { get; set; }
 
-    public string Kind { get; set; }
+    public string? Kind { get; set; }
 }

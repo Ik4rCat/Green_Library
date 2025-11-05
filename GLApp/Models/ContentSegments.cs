@@ -7,5 +7,5 @@ public class ContentSegments
     [PrimaryKey, AutoIncrement]
     public int Blockid { get; set; }
 
-    public byte[] Block { get; set; }
+    public byte[]? Block { get; set; }
 }

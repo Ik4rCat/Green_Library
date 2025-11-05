@@ -15,5 +15,5 @@ public class ContentSegdir
 
     public int EndBlock { get; set; }
 
-    public byte[] Root { get; set; }
+    public byte[]? Root { get; set; }
 }

@@ -8,6 +8,6 @@ public class ContentDocsize
     public int Docid { get; set; }
 
     [MaxLength(100)]
-    public byte[] Size { get; set; }
+    public byte[]? Size { get; set; }
 
 }

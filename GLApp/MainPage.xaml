@@ -9,10 +9,11 @@
              Margin="25"
              CornerRadius="20"/>
 
-        <Label Text="Sample text" 
-               TextColor="Black" 
-               Margin="45" 
-               FontSize="32"/>
+        <ScrollView Margin="45">
+            <WebView x:Name="ContentWebView"
+                     HeightRequest="1000"
+                     VerticalOptions="Start"/>
+        </ScrollView>
     </Grid>
 
 </ContentPage>

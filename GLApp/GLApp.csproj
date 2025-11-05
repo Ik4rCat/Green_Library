@@ -61,9 +61,8 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.120" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.10" />
-		<PackageReference Include="SQLite" Version="3.13.0" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
-		<PackageReference Include="SQLitePCLRaw.core" Version="3.0.2" />
+		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.7" />
 	</ItemGroup>
 
 </Project>

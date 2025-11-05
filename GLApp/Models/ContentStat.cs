@@ -7,5 +7,5 @@ public class ContentStat
     [PrimaryKey, AutoIncrement]
     public int Id { get; set; }
 
-    public byte[] Value { get; set; }
+    public byte[]? Value { get; set; }
 }

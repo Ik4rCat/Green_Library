@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using GLApp.Service;
 
 namespace GLApp
 {
@@ -14,6 +15,9 @@ namespace GLApp
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
+
+            // Регистрация сервиса базы данных
+            builder.Services.AddSingleton<DatabaseService>();
 
 #if DEBUG
     		builder.Logging.AddDebug();
