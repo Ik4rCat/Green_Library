@@ -44,6 +44,7 @@ namespace GLApp.Service
 
             _database = new SQLiteAsyncConnection(dbPath);
 
+<<<<<<< HEAD
             // Не создаем таблицы, т.к. они уже есть в БД
             // Просто проверяем, что БД доступна
             try
@@ -55,6 +56,16 @@ namespace GLApp.Service
             {
                 System.Diagnostics.Debug.WriteLine($"Ошибка проверки таблицы Structure: {ex.Message}");
             }
+=======
+            //_database.CreateTableAsync<Articles>().Wait();
+            _database.CreateTableAsync<Content>().Wait();
+            _database.CreateTableAsync<ContentContent>().Wait();
+            _database.CreateTableAsync<ContentDocsize>().Wait();
+            _database.CreateTableAsync<ContentSegdir>().Wait();
+            _database.CreateTableAsync<ContentSegments>().Wait();
+            _database.CreateTableAsync<ContentStat>().Wait();
+            _database.CreateTableAsync<Structure>().Wait();
+>>>>>>> Withoutdb
         }
 
         public Task<List<T>> GetAllAsync<T>() where T : new()
