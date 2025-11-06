@@ -30,7 +30,7 @@ namespace GLApp.Service
 
             _database = new SQLiteAsyncConnection(dbPath);
 
-            _database.CreateTableAsync<Articles>().Wait();
+            //_database.CreateTableAsync<Articles>().Wait();
             _database.CreateTableAsync<Content>().Wait();
             _database.CreateTableAsync<ContentContent>().Wait();
             _database.CreateTableAsync<ContentDocsize>().Wait();
