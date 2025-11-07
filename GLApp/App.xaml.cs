@@ -8,7 +8,7 @@ namespace GLApp
         public App()
         {
             InitializeComponent();
+            MainPage = new AppShell();
         }
-
     }
 }

@@ -1,4 +1,8 @@
-﻿namespace GLApp
+﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Behaviors;
+using CommunityToolkit.Maui.Core;
+
+namespace GLApp
 {
     public partial class MainPage : ContentPage
     {
