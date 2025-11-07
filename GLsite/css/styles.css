@@ -1,0 +1,153 @@
+/* Цветовая тема: зелёный #0d6f45 и жёлтые акценты */
+:root {
+    --green-600: #0d6f45;
+    --green-700: #0b5d3a;
+    --green-100: #e4f3ea;
+    --yellow-400: #ffd84d;
+    --yellow-500: #f6c90e;
+    --text: #092b1a;
+    --muted: #3a5a47;
+    --bg: #f7fbf8;
+    --card: #ffffff;
+    --shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.45;
+}
+
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(0deg, var(--green-600), var(--green-700));
+    color: #fff;
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.brand .logo { font-size: 20px; }
+.brand .logo-img { display: inline-block; }
+.brand .title { letter-spacing: .3px; }
+
+.nav { display: flex; gap: 6px; flex-wrap: wrap; }
+.nav-btn {
+    appearance: none;
+    border: 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--yellow-500);
+    color: #092b1a;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+}
+.nav-btn[aria-current="page"] { outline: 3px solid rgba(255,216,77,.6); }
+.nav-btn:hover { filter: brightness(0.97); }
+
+.app { padding: 20px; max-width: 1280px; margin: 0 auto; }
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+.card {
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 16px;
+    border: 1px solid #e8efe9;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.12); border-color: #dbe7df; }
+.card .cover { width: 100%; height: 160px; object-fit: cover; border-radius: 10px; margin-bottom: 10px; background: #eef5f0; }
+.detail .cover { height: 260px; }
+.detail h2 { margin-top: 8px; color: var(--green-600); }
+.card h3 { margin: 0 0 8px; color: var(--green-600); }
+.card .meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+.chip { display: inline-block; background: var(--green-100); color: var(--green-700); padding: 4px 8px; border-radius: 999px; font-size: 12px; }
+.card .description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 8;
+    overflow: hidden;
+    margin: 8px 0 0;
+}
+.card .footer { margin-top: 10px; display: flex; justify-content: flex-end; }
+.btn-link { background: transparent; border: 0; color: var(--green-600); font-weight: 700; cursor: pointer; padding: 6px 8px; border-radius: 8px; }
+.btn-link:hover { background: #eaf4ee; }
+
+.search-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.input, .select {
+    padding: 10px 12px;
+    border: 1px solid #dbe7df;
+    border-radius: 10px;
+    background: #fff;
+    min-width: 220px;
+}
+.btn-primary {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 0;
+    background: var(--green-600);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+}
+.btn-secondary {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--green-600);
+    background: transparent;
+    color: var(--green-600);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.site-footer {
+    padding: 16px;
+    text-align: center;
+    color: var(--muted);
+}
+
+/* Chat */
+.chat {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    min-height: 60vh;
+    gap: 12px;
+}
+.chat-log {
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+    overflow: auto;
+}
+.chat-msg { margin: 8px 0; }
+.chat-msg.user { text-align: right; }
+.chat-msg .bubble {
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 12px;
+    max-width: 80%;
+}
+.chat-msg.user .bubble { background: var(--green-600); color: #fff; }
+.chat-msg.assistant .bubble { background: var(--green-100); color: var(--text); }
+.chat-input { display: flex; gap: 8px; }
+
+@media (max-width: 640px) {
+    .nav { width: 100%; }
+    .nav-btn { flex: 1 1 auto; }
+    .input, .select { min-width: unset; flex: 1 1 140px; }
+}
+
+

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Справочник садовода • GLsite</title>
+    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="icon" href="./AppIcon/green_icon.png">
+</head>
+<body>
+    <header class="site-header">
+        <div class="brand">
+            <img class="logo-img" src="./AppIcon/green.svg" alt="logo" width="24" height="24"/>
+            <span class="title">Справочник садовода</span>
+        </div>
+        <nav class="nav">
+            <button class="nav-btn" data-route="home">Главная</button>
+            <button class="nav-btn" data-route="catalog">Каталог</button>
+            <button class="nav-btn" data-route="search">Поиск</button>
+            <button class="nav-btn" data-route="chat">Чат ИИ</button>
+        </nav>
+    </header>
+
+    <main id="app" class="app"></main>
+
+    <footer class="site-footer">
+        <span>GLsite • не изменяет приложение GLApp</span>
+    </footer>
+
+    <script>
+        // Подключаем sql.js с CDN; если не загрузится — будет graceful fallback
+        window.__sqlJsCdnLoaded = new Promise((resolve) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js';
+            s.async = true;
+            s.onload = () => resolve(true);
+            s.onerror = () => resolve(false);
+            document.head.appendChild(s);
+        });
+    </script>
+    <script src="./js/db.js"></script>
+    <script src="./js/chat.js"></script>
+    <script src="./js/app.js"></script>
+</body>
+</html>
+
+
