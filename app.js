@@ -14,7 +14,25 @@ let filteredResults = [];
 function toggleSection(sectionId) {
     const section = document.getElementById(sectionId);
     const content = section.querySelector('.section-content');
+    const header = section.querySelector('.section-header');
+    
+    // Переключаем класс collapsed
     content.classList.toggle('collapsed');
+    
+    // Обновляем стрелку в заголовке
+    if (header) {
+        // Получаем текст заголовка без стрелки
+        let headerText = header.textContent.trim();
+        // Убираем стрелку, если она есть
+        headerText = headerText.replace(/[▲▼]/g, '').trim();
+        
+        // Обновляем заголовок с правильной стрелкой
+        if (content.classList.contains('collapsed')) {
+            header.innerHTML = headerText + ' <span class="section-arrow">▼</span>';
+        } else {
+            header.innerHTML = headerText + ' <span class="section-arrow">▲</span>';
+        }
+    }
 }
 
 // Функция для раскрытия категории
@@ -188,12 +206,18 @@ function extractPlantDescription(doc) {
     const h2Elements = doc.querySelectorAll('h2');
     for (const h2 of h2Elements) {
         if (h2.textContent.includes('Ботаническое описание')) {
-            const p = h2.nextElementSibling?.nextElementSibling;
-            if (p && p.tagName === 'P') {
-                let text = p.textContent.trim();
-                // Убираем название растения из начала
-                text = text.replace(/^[^(]+\([^)]+\)\s*/, '');
-                return text.substring(0, 150) + (text.length > 150 ? '...' : '');
+            // Ищем параграф после ботанического описания
+            let nextElement = h2.nextElementSibling;
+            while (nextElement) {
+                if (nextElement.tagName === 'P' && nextElement.textContent.trim()) {
+                    let text = nextElement.textContent.trim();
+                    // Убираем название растения из начала
+                    text = text.replace(/^[^(]+\([^)]+\)\s*/, '');
+                    if (text.length > 0) {
+                        return text.substring(0, 120) + (text.length > 120 ? '...' : '');
+                    }
+                }
+                nextElement = nextElement.nextElementSibling;
             }
         }
     }
@@ -201,14 +225,34 @@ function extractPlantDescription(doc) {
     // Ищем первый параграф после strong
     const strong = doc.querySelector('strong');
     if (strong) {
-        const p = strong.parentElement?.nextElementSibling;
-        if (p && p.tagName === 'P') {
-            let text = p.textContent.trim();
-            return text.substring(0, 150) + (text.length > 150 ? '...' : '');
+        let nextElement = strong.parentElement?.nextElementSibling;
+        while (nextElement) {
+            if (nextElement.tagName === 'P' && nextElement.textContent.trim()) {
+                let text = nextElement.textContent.trim();
+                // Убираем название растения из начала, если есть
+                text = text.replace(/^[^(]+\([^)]+\)\s*/, '');
+                if (text.length > 0) {
+                    return text.substring(0, 120) + (text.length > 120 ? '...' : '');
+                }
+            }
+            nextElement = nextElement.nextElementSibling;
         }
     }
     
-    return 'Описание отсутствует';
+    // Ищем любой параграф с текстом
+    const paragraphs = doc.querySelectorAll('p');
+    for (const p of paragraphs) {
+        let text = p.textContent.trim();
+        if (text.length > 30) {
+            // Убираем название растения из начала, если есть
+            text = text.replace(/^[^(]+\([^)]+\)\s*/, '');
+            if (text.length > 0) {
+                return text.substring(0, 120) + (text.length > 120 ? '...' : '');
+            }
+        }
+    }
+    
+    return 'Информация о растении';
 }
 
 // Извлечение изображения
@@ -237,6 +281,31 @@ function extractPlantImage(doc) {
 function convertImagePath(src) {
     // Убираем протокол и домен, если есть
     src = src.replace(/^https?:\/\/[^\/]+/, '');
+    
+    // Если путь начинается с images/plants_photo/, преобразуем в Resorses/Images/plants_photo/
+    if (src.startsWith('images/plants_photo/')) {
+        return `Resorses/Images/plants_photo/${src.replace('images/plants_photo/', '')}`;
+    }
+    
+    // Если путь начинается с images/stati_photo/, преобразуем в Resorses/Images/stati_photo/
+    if (src.startsWith('images/stati_photo/')) {
+        return `Resorses/Images/stati_photo/${src.replace('images/stati_photo/', '')}`;
+    }
+    
+    // Если путь начинается с images/stati_photo2/, преобразуем в Resorses/Images/stati_photo2/
+    if (src.startsWith('images/stati_photo2/')) {
+        return `Resorses/Images/stati_photo2/${src.replace('images/stati_photo2/', '')}`;
+    }
+    
+    // Если путь начинается с images/stati_photo3/, преобразуем в Resorses/Images/stati_photo3/
+    if (src.startsWith('images/stati_photo3/')) {
+        return `Resorses/Images/stati_photo3/${src.replace('images/stati_photo3/', '')}`;
+    }
+    
+    // Если путь начинается с images/stati_photo4/, преобразуем в Resorses/Images/stati_photo4/
+    if (src.startsWith('images/stati_photo4/')) {
+        return `Resorses/Images/stati_photo4/${src.replace('images/stati_photo4/', '')}`;
+    }
     
     // Если путь начинается с images/, преобразуем в Resorses/Images/
     if (src.startsWith('images/')) {
@@ -297,10 +366,21 @@ function createPlantBlock(plant) {
     h3.textContent = plant.title;
     content.appendChild(h3);
     
-    const p = document.createElement('p');
-    p.textContent = plant.description;
-    p.className = 'plant-description';
-    content.appendChild(p);
+    // Описание
+    if (plant.description && plant.description !== 'Описание отсутствует' && plant.description !== 'Информация о растении') {
+        const p = document.createElement('p');
+        p.textContent = plant.description;
+        p.className = 'plant-description';
+        content.appendChild(p);
+    } else {
+        // Если описание не найдено, добавляем краткую информацию
+        const p = document.createElement('p');
+        p.textContent = 'Нажмите, чтобы узнать больше об этом растении';
+        p.className = 'plant-description';
+        p.style.fontStyle = 'italic';
+        p.style.color = '#888';
+        content.appendChild(p);
+    }
     
     block.appendChild(content);
     
@@ -371,13 +451,36 @@ function openPlantDetail(plant) {
     closeBtn.innerHTML = '&times;';
     closeBtn.onclick = () => modal.remove();
     
-    // Загружаем HTML и исправляем ссылки
-    fetch(`Resorses/DATA/${plant.filename}`)
-        .then(response => response.text())
-        .then(html => {
-            // Исправляем ссылки на изображения
-            let fixedHtml = html.replace(/src="images\//g, 'src="Resorses/Images/');
-            fixedHtml = fixedHtml.replace(/src='images\//g, "src='Resorses/Images/");
+            // Загружаем HTML и исправляем ссылки
+            fetch(`Resorses/DATA/${plant.filename}`)
+                .then(response => response.text())
+                .then(html => {
+                    // Исправляем ссылки на изображения в HTML перед загрузкой
+                    // Получаем базовый путь от корня сайта
+                    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+                    const baseUrl = basePath ? basePath + '/' : '/';
+                    
+                    // Заменяем images/plants_photo на Resorses/Images/plants_photo
+                    let fixedHtml = html.replace(/src="images\/plants_photo\//g, `src="${baseUrl}Resorses/Images/plants_photo/`);
+                    fixedHtml = fixedHtml.replace(/src='images\/plants_photo\//g, `src='${baseUrl}Resorses/Images/plants_photo/`);
+                    // Заменяем images/stati_photo на Resorses/Images/stati_photo
+                    fixedHtml = fixedHtml.replace(/src="images\/stati_photo\//g, `src="${baseUrl}Resorses/Images/stati_photo/`);
+                    fixedHtml = fixedHtml.replace(/src='images\/stati_photo\//g, `src='${baseUrl}Resorses/Images/stati_photo/`);
+                    // Заменяем images/stati_photo2 на Resorses/Images/stati_photo2
+                    fixedHtml = fixedHtml.replace(/src="images\/stati_photo2\//g, `src="${baseUrl}Resorses/Images/stati_photo2/`);
+                    fixedHtml = fixedHtml.replace(/src='images\/stati_photo2\//g, `src='${baseUrl}Resorses/Images/stati_photo2/`);
+                    // Заменяем images/stati_photo3 на Resorses/Images/stati_photo3
+                    fixedHtml = fixedHtml.replace(/src="images\/stati_photo3\//g, `src="${baseUrl}Resorses/Images/stati_photo3/`);
+                    fixedHtml = fixedHtml.replace(/src='images\/stati_photo3\//g, `src='${baseUrl}Resorses/Images/stati_photo3/`);
+                    // Заменяем images/stati_photo4 на Resorses/Images/stati_photo4
+                    fixedHtml = fixedHtml.replace(/src="images\/stati_photo4\//g, `src="${baseUrl}Resorses/Images/stati_photo4/`);
+                    fixedHtml = fixedHtml.replace(/src='images\/stati_photo4\//g, `src='${baseUrl}Resorses/Images/stati_photo4/`);
+                    // Общая замена для остальных images/
+                    fixedHtml = fixedHtml.replace(/src="images\//g, `src="${baseUrl}Resorses/Images/`);
+                    fixedHtml = fixedHtml.replace(/src='images\//g, `src='${baseUrl}Resorses/Images/`);
+                    
+                    // HTML-сущности &quot; уже исправлены в файлах на одинарные кавычки
+                    // Оставляем как есть, так как файлы уже исправлены
             
             // Создаем iframe для отображения HTML
             const iframe = document.createElement('iframe');
@@ -408,16 +511,74 @@ function openPlantDetail(plant) {
                         `;
                         iframeDoc.head.appendChild(style);
                         
-                        // Исправляем все ссылки на изображения в iframe
+                        // Изображения уже исправлены в HTML перед загрузкой в iframe
+                        // Добавляем обработчик ошибок для изображений на случай проблем
                         const images = iframeDoc.querySelectorAll('img');
                         images.forEach(img => {
-                            if (img.src && img.src.includes('images/')) {
-                                img.src = img.src.replace(/images\//g, 'Resorses/Images/');
-                            }
-                            if (img.getAttribute('src') && img.getAttribute('src').startsWith('images/')) {
-                                img.setAttribute('src', img.getAttribute('src').replace('images/', 'Resorses/Images/'));
-                            }
+                            img.onerror = function() {
+                                // Если изображение не загрузилось, скрываем его
+                                this.style.display = 'none';
+                            };
                         });
+                        
+                        // Добавляем функции jumpToAnchor и checkCache в iframe
+                        const script = iframeDoc.createElement('script');
+                        script.textContent = `
+                            function jumpToAnchor(sectionId, anchorId) {
+                                try {
+                                    const targetElement = document.querySelector(sectionId);
+                                    if (targetElement) {
+                                        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                        const anchor = document.querySelector(anchorId);
+                                        if (anchor) {
+                                            const allAnchors = document.querySelectorAll('.anchor');
+                                            allAnchors.forEach(a => a.style.backgroundColor = '');
+                                            anchor.style.backgroundColor = '#d4e8d4';
+                                            setTimeout(() => {
+                                                anchor.style.backgroundColor = '';
+                                            }, 2000);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.log('Ошибка навигации:', e);
+                                }
+                            }
+                            
+                            function checkCache(img) {
+                                // Пытаемся исправить путь к изображению
+                                let src = img.getAttribute('src') || img.src || '';
+                                
+                                // Если путь начинается с images/, исправляем
+                                if (src.includes('images/')) {
+                                    src = src.replace(/images\/plants_photo\//g, 'Resorses/Images/plants_photo/');
+                                    src = src.replace(/images\/stati_photo\//g, 'Resorses/Images/stati_photo/');
+                                    src = src.replace(/images\/stati_photo2\//g, 'Resorses/Images/stati_photo2/');
+                                    src = src.replace(/images\/stati_photo3\//g, 'Resorses/Images/stati_photo3/');
+                                    src = src.replace(/images\/stati_photo4\//g, 'Resorses/Images/stati_photo4/');
+                                    src = src.replace(/images\//g, 'Resorses/Images/');
+                                    
+                                    // Получаем базовый путь от корня сайта
+                                    try {
+                                        const parentWindow = window.parent || window;
+                                        const basePath = parentWindow.location.pathname.substring(0, parentWindow.location.pathname.lastIndexOf('/'));
+                                        if (basePath && !src.startsWith('http') && !src.startsWith('/')) {
+                                            src = basePath + '/' + src;
+                                        } else if (!src.startsWith('http') && !src.startsWith('/')) {
+                                            src = '/' + src;
+                                        }
+                                    } catch (e) {
+                                        // Если не можем получить доступ к parent, используем относительный путь
+                                        if (!src.startsWith('http') && !src.startsWith('/')) {
+                                            src = '../' + src;
+                                        }
+                                    }
+                                    
+                                    img.src = src;
+                                    img.setAttribute('src', src);
+                                }
+                            }
+                        `;
+                        iframeDoc.head.appendChild(script);
                     }
                 } catch (e) {
                     console.log('Не удалось добавить стили в iframe:', e);
@@ -776,4 +937,33 @@ function generateAIResponse(message) {
     }
     
     return 'Я могу помочь вам с вопросами о поливе, освещении, удобрении, пересадке растений и многом другом. Задайте вопрос!';
+}
+
+// Функция для навигации по содержанию в HTML файлах
+function jumpToAnchor(sectionId, anchorId) {
+    try {
+        // Ищем iframe с контентом
+        const iframe = document.querySelector('.plant-iframe');
+        if (iframe && iframe.contentDocument) {
+            const iframeDoc = iframe.contentDocument;
+            const targetElement = iframeDoc.querySelector(sectionId);
+            if (targetElement) {
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Подсвечиваем активный пункт содержания
+                const anchor = iframeDoc.querySelector(anchorId);
+                if (anchor) {
+                    // Убираем подсветку со всех пунктов
+                    const allAnchors = iframeDoc.querySelectorAll('.anchor');
+                    allAnchors.forEach(a => a.style.backgroundColor = '');
+                    // Подсвечиваем активный
+                    anchor.style.backgroundColor = '#d4e8d4';
+                    setTimeout(() => {
+                        anchor.style.backgroundColor = '';
+                    }, 2000);
+                }
+            }
+        }
+    } catch (e) {
+        console.log('Ошибка навигации:', e);
+    }
 }
