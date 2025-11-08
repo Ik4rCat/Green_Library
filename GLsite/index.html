@@ -3,24 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Справочник садовода • GLsite</title>
+    <title>Зеленый справочник</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="icon" href="./AppIcon/green_icon.png">
+    <link rel="icon" href="./Resorses/Icon/green_icon.png">
 </head>
 <body>
-    <header class="site-header">
-        <div class="brand">
-            <img class="logo-img" src="./AppIcon/green.svg" alt="logo" width="24" height="24"/>
-            <span class="title">Справочник садовода</span>
+    <div class="welcome-header">
+        <div class="logo-container">
+            <img class="logo-img" src="./Resorses/Icon/green.svg" alt="logo" width="80" height="80"/>
         </div>
-    </header>
+        <h1 class="welcome-title">Добро пожаловать в Зеленый справочник</h1>
+    </div>
 
-    <main id="app" class="app"></main>
+    <div class="search-container">
+        <div class="search-wrapper">
+            <input type="text" class="search-bar" placeholder="поиск" id="searchInput">
+            <button class="filter-btn" id="filterBtn" onclick="toggleFilters()">
+                <span>Фильтры</span>
+                <span class="filter-icon">⚙</span>
+            </button>
+        </div>
+        <div class="filters-panel" id="filtersPanel">
+            <div class="filter-group">
+                <label>Тип растения:</label>
+                <select id="plantTypeFilter">
+                    <option value="">Все</option>
+                    <option value="комнатное">Комнатные</option>
+                    <option value="садовое">Садовые</option>
+                    <option value="дерево">Деревья</option>
+                    <option value="кустарник">Кустарники</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Освещение:</label>
+                <select id="lightFilter">
+                    <option value="">Все</option>
+                    <option value="яркий">Яркий свет</option>
+                    <option value="рассеянный">Рассеянный свет</option>
+                    <option value="тень">Тень</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Сложность ухода:</label>
+                <select id="careFilter">
+                    <option value="">Все</option>
+                    <option value="легкий">Легкий</option>
+                    <option value="средний">Средний</option>
+                    <option value="сложный">Сложный</option>
+                </select>
+            </div>
+            <button class="apply-filters-btn" onclick="applyFilters()">Применить</button>
+            <button class="clear-filters-btn" onclick="clearFilters()">Сбросить</button>
+        </div>
+    </div>
 
-    <footer class="site-footer">
-        <span>GLsite • 2k25 by CAS</span>
-    </footer>
+    <!-- Результаты поиска -->
+    <div class="search-results-container" id="searchResultsContainer" style="display: none;">
+        <div class="search-results">
+            <h3 class="search-results-title">Результаты поиска</h3>
+            <div class="sample-blocks" id="searchResultsBlocks">
+                <!-- Результаты будут загружены через JavaScript -->
+            </div>
+        </div>
+    </div>
 
+    <main class="main-content">
+        <div class="catalog-container">
+            <h2 class="catalog-title">Каталог</h2>
+            
+            <div class="catalog-section" id="allPlantsSection">
+                <button class="section-header" onclick="toggleSection('allPlantsSection')">
+                    Все растения
+                </button>
+                <div class="section-content" id="allPlantsContent">
+                    <div class="sample-blocks" id="allPlantsBlocks">
+                        <!-- Блоки будут загружены через JavaScript -->
+                    </div>
+                    <div class="expand-hint" onclick="expandCategory('allPlants')">
+                        Нажмите чтобы раскрыть категорию ↓
+                    </div>
+                </div>
+            </div>
+
+            <div class="catalog-section" id="familiesSection">
+                <button class="section-header" onclick="toggleSection('familiesSection')">
+                    Семейства
+                </button>
+                <div class="section-content" id="familiesContent">
+                    <div class="sample-blocks" id="familiesBlocks">
+                        <!-- Блоки будут загружены через JavaScript -->
+                    </div>
+                    <div class="expand-hint" onclick="expandCategory('families')">
+                        Нажмите чтобы раскрыть категорию ↓
+                    </div>
+                </div>
+            </div>
+
+            <div class="catalog-section" id="popularSection">
+                <button class="section-header" onclick="toggleSection('popularSection')">
+                    Популярные растения
+                </button>
+                <div class="section-content" id="popularContent">
+                    <div class="sample-blocks" id="popularBlocks">
+                        <!-- Блоки будут загружены через JavaScript -->
+                    </div>
+                    <div class="expand-hint" onclick="expandCategory('popular')">
+                        Нажмите чтобы раскрыть категорию ↓
+                    </div>
+                </div>
+            </div>
+
+            <div class="catalog-section" id="indoorSection">
+                <button class="section-header" onclick="toggleSection('indoorSection')">
+                    Комнатные растения
+                </button>
+                <div class="section-content" id="indoorContent">
+                    <div class="sample-blocks" id="indoorBlocks">
+                        <!-- Блоки будут загружены через JavaScript -->
+                    </div>
+                    <div class="expand-hint" onclick="expandCategory('indoor')">
+                        Нажмите чтобы раскрыть категорию ↓
+                    </div>
+                </div>
+            </div>
+
+            <div class="catalog-section" id="gardenSection">
+                <button class="section-header" onclick="toggleSection('gardenSection')">
+                    Садовые растения
+                </button>
+                <div class="section-content" id="gardenContent">
+                    <div class="sample-blocks" id="gardenBlocks">
+                        <!-- Блоки будут загружены через JavaScript -->
+                    </div>
+                    <div class="expand-hint" onclick="expandCategory('garden')">
+                        Нажмите чтобы раскрыть категорию ↓
+                    </div>
+                </div>
+            </div>
+
+            <div class="catalog-section" id="careSection">
+                <button class="section-header" onclick="toggleSection('careSection')">
+                    Уход и выращивание
+                </button>
+                <div class="section-content" id="careContent">
+                    <div class="sample-blocks" id="careBlocks">
+                        <!-- Блоки будут загружены через JavaScript -->
+                    </div>
+                    <div class="expand-hint" onclick="expandCategory('care')">
+                        Нажмите чтобы раскрыть категорию ↓
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="ai-chat-widget" id="aiChatWidget">
+        <div class="chat-header">Al chat</div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-container">
+            <input type="text" class="chat-input" placeholder="написать запрос" id="chatInput">
+        </div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
 
