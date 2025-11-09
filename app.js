@@ -901,6 +901,14 @@ function sendChatMessage(message) {
     }, 500);
 }
 
+// Функция для переключения состояния чата
+function toggleChat() {
+    const chatWidget = document.getElementById('aiChatWidget');
+    if (chatWidget) {
+        chatWidget.classList.toggle('collapsed');
+    }
+}
+
 // Генерация ответа AI
 function generateAIResponse(message) {
     const msg = message.toLowerCase();

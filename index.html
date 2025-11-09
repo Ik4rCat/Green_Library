@@ -158,10 +158,15 @@
     </main>
 
     <div class="ai-chat-widget" id="aiChatWidget">
-        <div class="chat-header">Al chat</div>
-        <div class="chat-messages" id="chatMessages"></div>
-        <div class="chat-input-container">
-            <input type="text" class="chat-input" placeholder="написать запрос" id="chatInput">
+        <div class="chat-header" onclick="toggleChat()">
+            <span>Al chat</span>
+            <span class="chat-toggle-icon">▼</span>
+        </div>
+        <div class="chat-content" id="chatContent">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-container">
+                <input type="text" class="chat-input" placeholder="написать запрос" id="chatInput">
+            </div>
         </div>
     </div>
 
