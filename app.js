@@ -100,14 +100,18 @@ async function loadPlantFiles(category, container) {
         container.innerHTML = '';
         container.style.display = 'grid';
         
+        // Используем Set для более эффективной проверки дубликатов
+        const existingFilenames = new Set(allPlants.map(p => p.filename).filter(Boolean));
+        
         for (let i = 0; i < displayFiles.length; i++) {
             const file = displayFiles[i];
             try {
                 const plant = await loadPlantData(file);
-                if (plant) {
+                if (plant && plant.filename) {
                     // Проверяем, не добавлено ли уже растение
-                    if (!allPlants.find(p => p.filename === plant.filename)) {
+                    if (!existingFilenames.has(plant.filename)) {
                         allPlants.push(plant);
+                        existingFilenames.add(plant.filename);
                     }
                     const block = createPlantBlock(plant);
                     container.appendChild(block);
@@ -128,11 +132,22 @@ async function loadPlantFiles(category, container) {
 
 // Загрузка растений в фоне для поиска
 async function loadPlantsInBackground(files) {
+    const existingFilenames = new Set(allPlants.map(p => p.filename).filter(Boolean));
+    
     for (const file of files) {
+        // Пропускаем, если файл уже загружен
+        if (existingFilenames.has(file)) {
+            continue;
+        }
+        
         try {
             const plant = await loadPlantData(file);
-            if (plant) {
-                allPlants.push(plant);
+            if (plant && plant.filename) {
+                // Проверяем еще раз перед добавлением
+                if (!existingFilenames.has(plant.filename)) {
+                    allPlants.push(plant);
+                    existingFilenames.add(plant.filename);
+                }
             }
         } catch (error) {
             // Игнорируем ошибки при фоновой загрузке
@@ -202,54 +217,68 @@ function extractPlantTitle(doc) {
     return 'Растение';
 }
 
-// Извлечение описания
+// Извлечение описания (улучшенная версия для более интересных описаний)
 function extractPlantDescription(doc) {
+    // Приоритет 1: Ищем интересные описания в ботаническом описании
     const h2Elements = doc.querySelectorAll('h2');
     for (const h2 of h2Elements) {
         if (h2.textContent.includes('Ботаническое описание')) {
-            // Ищем strong элемент с описанием после h2
             let nextElement = h2.nextElementSibling;
-            while (nextElement) {
-                // Проверяем, есть ли strong элемент в текущем элементе
-                const strong = nextElement.querySelector('strong') || (nextElement.tagName === 'STRONG' ? nextElement : null);
-                if (strong) {
-                    // Получаем весь текст родительского элемента (включая текст после strong)
-                    const parentText = nextElement.textContent.trim();
-                    if (parentText) {
-                        // Извлекаем описание после названия и латинского названия
-                        // Формат: "Название (лат. LatinName) – описание..."
-                        const match = parentText.match(/[–—]\s*(.+)/);
-                        if (match && match[1]) {
-                            let description = match[1].trim();
-                            // Убираем HTML теги <br> и заменяем на пробелы
-                            description = description.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ');
-                            // Убираем вложенные strong элементы из текста
-                            description = description.replace(/\*\*([^*]+)\*\*/g, '$1');
-                            if (description.length > 0) {
-                                return description.substring(0, 120) + (description.length > 120 ? '...' : '');
+            let foundDescription = false;
+            
+            while (nextElement && !foundDescription) {
+                // Ищем параграф с описанием после названия
+                if (nextElement.tagName === 'P') {
+                    let text = nextElement.textContent.trim();
+                // Убираем название растения из начала
+                    text = text.replace(/^[^(]+\([^)]+\)\s*[–—]?\s*/, '');
+                    // Убираем лишние пробелы и переносы строк
+                    text = text.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ').trim();
+                    
+                    // Проверяем, что это осмысленное описание (не слишком короткое и не техническое)
+                    if (text.length > 40 && !text.match(/^(см\.|см|см\s|рис\.|рис|рис\s)/i)) {
+                        // Ищем интересные ключевые слова, которые делают описание более привлекательным
+                        const interestingKeywords = ['красивое', 'декоративное', 'популярное', 'неприхотливое', 
+                            'цветет', 'цветение', 'листья', 'выращивают', 'используют', 'растет', 'любит', 
+                            'предпочитает', 'требует', 'нуждается', 'отличается', 'характеризуется'];
+                        
+                        const hasInterestingContent = interestingKeywords.some(keyword => 
+                            text.toLowerCase().includes(keyword)
+                        );
+                        
+                        if (hasInterestingContent || text.length > 60) {
+                            // Берем первые 2-3 предложения для более полного описания
+                            const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+                            let description = sentences.slice(0, 2).join(' ').trim();
+                            
+                            if (description.length < 50) {
+                                description = sentences.slice(0, 3).join(' ').trim();
                             }
-                        }
-                        // Если нет тире, пытаемся извлечь текст после названия
-                        const strongText = strong.textContent.trim();
-                        const nameMatch = strongText.match(/^([^(]+)\([^)]+\)/);
-                        if (nameMatch) {
-                            // Берем текст после strong элемента
-                            const afterStrong = parentText.substring(parentText.indexOf(strongText) + strongText.length).trim();
-                            if (afterStrong.length > 20) {
-                                let description = afterStrong.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ');
-                                return description.substring(0, 120) + (description.length > 120 ? '...' : '');
+                            
+                            if (description.length > 0) {
+                                return description.substring(0, 150) + (description.length > 150 ? '...' : '');
                             }
                         }
                     }
                 }
                 
-                // Ищем параграф после ботанического описания
-                if (nextElement.tagName === 'P' && nextElement.textContent.trim()) {
-                    let text = nextElement.textContent.trim();
-                    // Убираем название растения из начала
-                    text = text.replace(/^[^(]+\([^)]+\)\s*/, '');
-                    if (text.length > 0) {
-                        return text.substring(0, 120) + (text.length > 120 ? '...' : '');
+                // Ищем описание в strong элементе
+                const strong = nextElement.querySelector('strong') || (nextElement.tagName === 'STRONG' ? nextElement : null);
+    if (strong) {
+                    const parentText = nextElement.textContent.trim();
+                    if (parentText) {
+                        // Извлекаем описание после названия
+                        const match = parentText.match(/[–—]\s*(.+)/);
+                        if (match && match[1]) {
+                            let description = match[1].trim();
+                            description = description.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ');
+                            
+                            if (description.length > 40) {
+                                const sentences = description.match(/[^.!?]+[.!?]+/g) || [description];
+                                let desc = sentences.slice(0, 2).join(' ').trim();
+                                return desc.substring(0, 150) + (desc.length > 150 ? '...' : '');
+                            }
+                        }
                     }
                 }
                 
@@ -258,64 +287,52 @@ function extractPlantDescription(doc) {
         }
     }
     
-    // Ищем первый strong элемент и извлекаем текст из родительского элемента
-    const strong = doc.querySelector('strong');
-    if (strong) {
-        const parent = strong.parentElement;
-        if (parent) {
-            const parentText = parent.textContent.trim();
-            if (parentText) {
-                // Извлекаем описание после названия
-                const match = parentText.match(/[–—]\s*(.+)/);
-                if (match && match[1]) {
-                    let description = match[1].trim();
-                    description = description.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ');
-                    if (description.length > 0) {
-                        return description.substring(0, 120) + (description.length > 120 ? '...' : '');
+    // Приоритет 2: Ищем описание в разделе "Особенности" или "Характеристики"
+    for (const h2 of h2Elements) {
+        if (h2.textContent.match(/Особенности|Характеристики|Описание/i)) {
+            let nextElement = h2.nextElementSibling;
+            let count = 0;
+            while (nextElement && count < 3) {
+                if (nextElement.tagName === 'P') {
+                    let text = nextElement.textContent.trim();
+                    text = text.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ').trim();
+                    
+                    if (text.length > 50) {
+                        const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+                        let description = sentences.slice(0, 2).join(' ').trim();
+                        return description.substring(0, 150) + (description.length > 150 ? '...' : '');
                     }
                 }
-                // Если нет тире, извлекаем текст после strong
-                const strongText = strong.textContent.trim();
-                const nameMatch = strongText.match(/^([^(]+)\([^)]+\)/);
-                if (nameMatch) {
-                    const afterStrong = parentText.substring(parentText.indexOf(strongText) + strongText.length).trim();
-                    if (afterStrong.length > 20) {
-                        let description = afterStrong.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ');
-                        return description.substring(0, 120) + (description.length > 120 ? '...' : '');
-                    }
-                }
+                nextElement = nextElement.nextElementSibling;
+                count++;
             }
-        }
-        
-        // Ищем параграф после strong
-        let nextElement = strong.parentElement?.nextElementSibling;
-        while (nextElement) {
-            if (nextElement.tagName === 'P' && nextElement.textContent.trim()) {
-                let text = nextElement.textContent.trim();
-                // Убираем название растения из начала, если есть
-                text = text.replace(/^[^(]+\([^)]+\)\s*/, '');
-                if (text.length > 0) {
-                    return text.substring(0, 120) + (text.length > 120 ? '...' : '');
-                }
-            }
-            nextElement = nextElement.nextElementSibling;
         }
     }
     
-    // Ищем любой параграф с текстом
+    // Приоритет 3: Ищем первый информативный параграф
     const paragraphs = doc.querySelectorAll('p');
     for (const p of paragraphs) {
-        let text = p.textContent.trim();
-        if (text.length > 30) {
-            // Убираем название растения из начала, если есть
-            text = text.replace(/^[^(]+\([^)]+\)\s*/, '');
-            if (text.length > 0) {
-                return text.substring(0, 120) + (text.length > 120 ? '...' : '');
+            let text = p.textContent.trim();
+        // Убираем название растения из начала
+        text = text.replace(/^[^(]+\([^)]+\)\s*[–—]?\s*/, '');
+        text = text.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ').trim();
+        
+        // Пропускаем слишком короткие или технические тексты
+        if (text.length > 50 && !text.match(/^(см\.|см|см\s|рис\.|рис|рис\s)/i)) {
+            // Проверяем, что это не просто список или техническая информация
+            if (!text.match(/^\d+[\.\)]\s/) && text.split(' ').length > 8) {
+                const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+                let description = sentences.slice(0, 2).join(' ').trim();
+                
+                if (description.length > 40) {
+                    return description.substring(0, 150) + (description.length > 150 ? '...' : '');
+                }
             }
         }
     }
     
-    return 'Информация о растении';
+    // Fallback: возвращаем общее описание
+    return 'Интересное растение с декоративными качествами. Нажмите, чтобы узнать больше.';
 }
 
 // Извлечение изображения
@@ -431,10 +448,10 @@ function createPlantBlock(plant) {
     
     // Описание
     if (plant.description && plant.description !== 'Описание отсутствует' && plant.description !== 'Информация о растении') {
-        const p = document.createElement('p');
-        p.textContent = plant.description;
-        p.className = 'plant-description';
-        content.appendChild(p);
+    const p = document.createElement('p');
+    p.textContent = plant.description;
+    p.className = 'plant-description';
+    content.appendChild(p);
     } else {
         // Если описание не найдено, добавляем краткую информацию
         const p = document.createElement('p');
@@ -514,10 +531,10 @@ function openPlantDetail(plant) {
     closeBtn.innerHTML = '&times;';
     closeBtn.onclick = () => modal.remove();
     
-            // Загружаем HTML и исправляем ссылки
-            fetch(`Resorses/DATA/${plant.filename}`)
-                .then(response => response.text())
-                .then(html => {
+    // Загружаем HTML и исправляем ссылки
+    fetch(`Resorses/DATA/${plant.filename}`)
+        .then(response => response.text())
+        .then(html => {
                     // Исправляем ссылки на изображения в HTML перед загрузкой
                     // Получаем базовый путь от корня сайта
                     const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
@@ -725,6 +742,7 @@ function searchPlants(query) {
 // Выполнение поиска (улучшенный, более гибкий)
 async function performSearch(query) {
     const results = [];
+    const addedFilenames = new Set(); // Для отслеживания уже добавленных растений
     const queryLower = query.toLowerCase().trim();
     
     // Разбиваем запрос на слова для более гибкого поиска
@@ -777,27 +795,46 @@ async function performSearch(query) {
     
     // Ищем в уже загруженных растениях
     for (const plant of allPlants) {
-        const relevance = calculateRelevance(plant);
-        if (relevance > 0) {
-            results.push({ plant, relevance });
+        // Проверяем, не добавлено ли уже это растение
+        if (plant.filename && !addedFilenames.has(plant.filename)) {
+            const relevance = calculateRelevance(plant);
+            if (relevance > 0) {
+                results.push({ plant, relevance });
+                addedFilenames.add(plant.filename);
+            }
         }
     }
     
     // Если результатов мало, загружаем больше файлов
     if (results.length < 10) {
         const files = await getPlantFiles();
+        const existingFilenames = new Set(allPlants.map(p => p.filename).filter(Boolean));
         const filesToLoad = files.slice(allPlants.length, Math.min(allPlants.length + 100, files.length));
         
         for (const file of filesToLoad) {
             if (results.length >= 50) break;
             
+            // Пропускаем, если файл уже загружен
+            if (existingFilenames.has(file)) {
+                continue;
+            }
+            
             try {
                 const plant = await loadPlantData(file);
-                if (plant) {
-                    allPlants.push(plant);
-                    const relevance = calculateRelevance(plant);
-                    if (relevance > 0) {
-                        results.push({ plant, relevance });
+                if (plant && plant.filename) {
+                    // Проверяем, не добавлено ли уже это растение в результаты
+                    if (!addedFilenames.has(plant.filename)) {
+                        // Добавляем в allPlants только если его там еще нет
+                        if (!existingFilenames.has(plant.filename)) {
+                            allPlants.push(plant);
+                            existingFilenames.add(plant.filename);
+                        }
+                        
+                        const relevance = calculateRelevance(plant);
+                        if (relevance > 0) {
+                            results.push({ plant, relevance });
+                            addedFilenames.add(plant.filename);
+                        }
                     }
                 }
             } catch (error) {
@@ -809,8 +846,18 @@ async function performSearch(query) {
     // Сортируем по релевантности
     results.sort((a, b) => b.relevance - a.relevance);
     
-    // Возвращаем только растения (без relevance)
-    return results.map(r => r.plant).slice(0, 50);
+    // Возвращаем только растения (без relevance), убирая возможные дубликаты
+    const uniquePlants = [];
+    const seenFilenames = new Set();
+    
+    for (const result of results) {
+        if (result.plant.filename && !seenFilenames.has(result.plant.filename)) {
+            uniquePlants.push(result.plant);
+            seenFilenames.add(result.plant.filename);
+        }
+    }
+    
+    return uniquePlants.slice(0, 50);
 }
 
 // Фильтры удалены
@@ -948,7 +995,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (apiKey) {
             bubble.textContent = 'Здравствуйте! Я помогу вам с вопросами о растениях. У меня есть доступ к базе данных сайта.';
         } else {
-            bubble.textContent = 'Здравствуйте! Я помогу вам с вопросами о растениях.';
+        bubble.textContent = 'Здравствуйте! Я помогу вам с вопросами о растениях.';
         }
         
         welcomeMsg.appendChild(bubble);
@@ -998,19 +1045,19 @@ async function sendChatMessage(message) {
     
     if (!apiKey) {
         // Если нет API ключа, используем простые ответы
-        setTimeout(() => {
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'chat-msg assistant';
-            const aiBubble = document.createElement('div');
-            aiBubble.className = 'bubble';
-            
-            const response = generateAIResponse(message);
-            aiBubble.textContent = response;
-            
-            aiMsg.appendChild(aiBubble);
-            chatMessages.appendChild(aiMsg);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }, 500);
+    setTimeout(() => {
+        const aiMsg = document.createElement('div');
+        aiMsg.className = 'chat-msg assistant';
+        const aiBubble = document.createElement('div');
+        aiBubble.className = 'bubble';
+        
+        const response = generateAIResponse(message);
+        aiBubble.textContent = response;
+        
+        aiMsg.appendChild(aiBubble);
+        chatMessages.appendChild(aiMsg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 500);
         return;
     }
     
@@ -1035,12 +1082,19 @@ async function sendChatMessage(message) {
         // Удаляем индикатор загрузки
         loadingMsg.remove();
         
-        // Показываем ответ
+        // Показываем ответ с поддержкой markdown
         const aiMsg = document.createElement('div');
         aiMsg.className = 'chat-msg assistant';
         const aiBubble = document.createElement('div');
-        aiBubble.className = 'bubble';
-        aiBubble.textContent = response;
+        aiBubble.className = 'bubble markdown-content';
+        
+        // Рендерим markdown в HTML
+        if (typeof marked !== 'undefined') {
+            aiBubble.innerHTML = marked.parse(response);
+        } else {
+            // Fallback: если marked.js не загрузился, показываем как обычный текст
+            aiBubble.textContent = response;
+        }
         
         aiMsg.appendChild(aiBubble);
         chatMessages.appendChild(aiMsg);
@@ -1381,7 +1435,14 @@ async function getPlantContext(userMessage) {
 // Вызов OpenRouter API
 async function callOpenAI(userMessage, plantContext, apiKey) {
     // Формируем системный промпт с контекстом
-    let systemPrompt = `Ты помощник по уходу за растениями. Ты помогаешь пользователям с вопросами о растениях, их выращивании, уходе, поливе, освещении и других аспектах садоводства и комнатного цветоводства. Отвечай на русском языке, будь дружелюбным и информативным. Используй информацию из базы данных о растениях, если она доступна.`;
+    let systemPrompt = `Ты помощник по уходу за растениями. Ты помогаешь пользователям с вопросами о растениях, их выращивании, уходе, поливе, освещении и других аспектах садоводства и комнатного цветоводства. Отвечай на русском языке, будь дружелюбным и информативным. Используй информацию из базы данных о растениях, если она доступна.
+
+ВАЖНО: Используй Markdown для форматирования ответов:
+- Используй **жирный текст** для важных моментов
+- Используй списки (- или 1.) для перечисления
+- Используй заголовки (##) для структурирования длинных ответов
+- Используй \`код\` для названий растений или технических терминов
+- Делай ответы структурированными и легко читаемыми`;
     
     // Добавляем контекст о растениях
     if (plantContext.length > 0) {
@@ -1475,7 +1536,8 @@ function getChatHistory() {
         const bubble = msg.querySelector('.bubble');
         if (bubble && bubble.id !== 'loadingMsg') {
             const role = msg.classList.contains('user') ? 'user' : 'assistant';
-            const content = bubble.textContent.trim();
+            // Для markdown-контента извлекаем текст из HTML
+            const content = bubble.textContent.trim() || bubble.innerText.trim();
             if (content) {
                 history.push({ role, content });
             }
