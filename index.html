@@ -154,20 +154,10 @@
             <span class="chat-drag-handle" onmousedown="startDrag(event)">☰</span>
             <span onclick="toggleChat()">Al chat</span>
             <div class="chat-header-actions">
-                <button class="chat-settings-btn" onclick="toggleApiSettings(event)" title="Настройки API">⚙</button>
                 <span class="chat-toggle-icon" onclick="toggleChat()">▼</span>
             </div>
         </div>
         <div class="chat-resize-handle" id="chatResizeHandle"></div>
-        <div class="chat-api-settings" id="chatApiSettings" style="display: none;">
-            <label>API ключ OpenRouter:</label>
-            <input type="password" class="api-key-input" id="apiKeyInput" placeholder="sk-...">
-            <div class="api-settings-buttons">
-                <button class="api-save-btn" onclick="saveApiKey()">Сохранить</button>
-                <button class="api-test-btn" onclick="testApiKey()">Проверить</button>
-            </div>
-            <div class="api-status" id="apiStatus"></div>
-        </div>
         <div class="chat-content" id="chatContent">
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input-container">

@@ -675,6 +675,17 @@ body {
     background: #b0b0b0;
 }
 
+.chat-msg .bubble a {
+    color: var(--catalog-dark-green);
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.chat-msg .bubble a:hover {
+    color: #3d4a28;
+    text-decoration: none;
+}
+
 /* Markdown стили для ответов ИИ */
 .chat-msg .bubble.markdown-content {
     padding: 12px 16px;

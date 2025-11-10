@@ -991,12 +991,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
         
-        const apiKey = localStorage.getItem('openrouter_api_key') || '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';
-        if (apiKey) {
-            bubble.textContent = 'Здравствуйте! Я помогу вам с вопросами о растениях. У меня есть доступ к базе данных сайта.';
-        } else {
-        bubble.textContent = 'Здравствуйте! Я помогу вам с вопросами о растениях.';
-        }
+        bubble.textContent = 'Здравствуйте! Я помогу вам с вопросами о растениях. У меня есть доступ к базе данных сайта.';
         
         welcomeMsg.appendChild(bubble);
         chatMessages.appendChild(welcomeMsg);
@@ -1040,26 +1035,8 @@ async function sendChatMessage(message) {
     
     chatMessages.scrollTop = chatMessages.scrollHeight;
     
-    // Проверяем наличие API ключа
-    const apiKey = localStorage.getItem('openrouter_api_key') || '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';
-    
-    if (!apiKey) {
-        // Если нет API ключа, используем простые ответы
-    setTimeout(() => {
-        const aiMsg = document.createElement('div');
-        aiMsg.className = 'chat-msg assistant';
-        const aiBubble = document.createElement('div');
-        aiBubble.className = 'bubble';
-        
-        const response = generateAIResponse(message);
-        aiBubble.textContent = response;
-        
-        aiMsg.appendChild(aiBubble);
-        chatMessages.appendChild(aiMsg);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }, 500);
-        return;
-    }
+    // Используем API ключ по умолчанию
+    const apiKey = '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';
     
     // Показываем индикатор загрузки
     const loadingMsg = document.createElement('div');
@@ -1109,7 +1086,12 @@ async function sendChatMessage(message) {
         const errorBubble = document.createElement('div');
         errorBubble.className = 'bubble';
         errorBubble.style.color = '#d32f2f';
-        errorBubble.textContent = 'Ошибка: ' + (error.message || 'Не удалось получить ответ от ИИ');
+        
+        let errorText = error.message || 'Не удалось получить ответ от ИИ';
+        
+        // Упрощенное сообщение об ошибке
+        
+        errorBubble.textContent = 'Ошибка: ' + errorText;
         
         errorMsg.appendChild(errorBubble);
         chatMessages.appendChild(errorMsg);
@@ -1133,13 +1115,6 @@ function toggleChat() {
             saveChatPosition(rect.left, rect.top);
         }
         
-        // Скрываем настройки при сворачивании
-        if (isCollapsing) {
-            const settings = document.getElementById('chatApiSettings');
-            if (settings) {
-                settings.style.display = 'none';
-            }
-        }
     }
 }
 
@@ -1299,9 +1274,12 @@ function toggleApiSettings(event) {
         // Загружаем сохраненный ключ
         const apiKeyInput = document.getElementById('apiKeyInput');
         if (apiKeyInput) {
-            const savedKey = localStorage.getItem('openrouter_api_key') || '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';
+            const savedKey = localStorage.getItem('openrouter_api_key');
             if (savedKey) {
                 apiKeyInput.value = savedKey;
+            } else {
+                apiKeyInput.value = '';
+                apiKeyInput.placeholder = 'sk-or-v1-...';
             }
         }
     }
@@ -1336,20 +1314,45 @@ async function testApiKey() {
     showApiStatus('Проверяю...', 'info');
     
     try {
+        const currentOrigin = window.location.origin || 'https://localhost';
+        const currentUrl = window.location.href || currentOrigin;
+        
+        const headers = {
+            'Authorization': `Bearer ${apiKey}`
+        };
+        
+        // Добавляем заголовки для OpenRouter
+        if (currentOrigin && currentOrigin !== 'https://localhost') {
+            headers['HTTP-Referer'] = currentUrl;
+        }
+        headers['X-Title'] = 'Green Library';
+        
         const response = await fetch('https://openrouter.ai/api/v1/models', {
-            headers: {
-                'Authorization': `Bearer ${apiKey}`
-            }
+            headers: headers
         });
         
         if (response.ok) {
             showApiStatus('API ключ действителен ✓', 'success');
             localStorage.setItem('openrouter_api_key', apiKey);
         } else {
-            showApiStatus('Неверный API ключ', 'error');
+            let errorText = 'Неверный API ключ';
+            try {
+                const errorData = await response.json();
+                const errorMsg = errorData.error?.message || errorData.message;
+                if (errorMsg) {
+                    errorText = errorMsg;
+                }
+            } catch (e) {
+                // Используем текст по умолчанию
+            }
+            showApiStatus(errorText, 'error');
         }
     } catch (error) {
-        showApiStatus('Ошибка проверки: ' + error.message, 'error');
+        let errorMsg = 'Ошибка проверки: ' + error.message;
+        if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+            errorMsg = 'Ошибка сети. Проверьте подключение к интернету.';
+        }
+        showApiStatus(errorMsg, 'error');
     }
 }
 
@@ -1467,28 +1470,39 @@ async function callOpenAI(userMessage, plantContext, apiKey) {
         { role: 'user', content: userMessage }
     ];
     
-    // Список моделей для попытки (от более предпочтительных к менее)
+    // Список бесплатных моделей для попытки (от более предпочтительных к менее)
     const models = [
-        'openai/gpt-3.5-turbo',
-        'gpt-3.5-turbo',
         'meta-llama/llama-3.2-3b-instruct:free',
-        'anthropic/claude-3-haiku',
-        'openai/gpt-4o-mini'
+        'google/gemma-2-2b-it:free',
+        'google/gemma-2-9b-it:free',
+        'mistralai/mistral-7b-instruct:free',
+        'qwen/qwen-2-7b-instruct:free'
     ];
     
     let lastError = null;
     
+    // Получаем текущий URL для заголовков
+    const currentOrigin = window.location.origin || 'https://localhost';
+    const currentUrl = window.location.href || currentOrigin;
+    
     // Пробуем каждую модель
     for (const model of models) {
         try {
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            };
+            
+            // Добавляем заголовки для OpenRouter (только если они требуются)
+            // HTTP-Referer должен быть полным URL страницы
+            if (currentOrigin && currentOrigin !== 'https://localhost') {
+                headers['HTTP-Referer'] = currentUrl;
+            }
+            headers['X-Title'] = 'Green Library';
+            
             const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                    'HTTP-Referer': window.location.origin || 'https://localhost',
-                    'X-Title': 'Green Library'
-                },
+                headers: headers,
                 body: JSON.stringify({
                     model: model,
                     messages: messages,
@@ -1498,9 +1512,27 @@ async function callOpenAI(userMessage, plantContext, apiKey) {
             });
             
             if (!response.ok) {
-                const error = await response.json();
-                console.warn(`Model ${model} failed:`, error);
-                lastError = error.error?.message || error.message || `HTTP ${response.status}`;
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (e) {
+                    errorData = { error: { message: `HTTP ${response.status}: ${response.statusText}` } };
+                }
+                
+                console.warn(`Model ${model} failed:`, errorData);
+                
+                // Более детальная обработка ошибок
+                const errorMessage = errorData.error?.message || errorData.message || `HTTP ${response.status}`;
+                
+                // Если ошибка "User not found", это может означать проблему с API ключом
+                if (errorMessage.toLowerCase().includes('user not found') || 
+                    errorMessage.toLowerCase().includes('unauthorized') ||
+                    response.status === 401) {
+                    lastError = 'Неверный API ключ. Проверьте ключ в настройках.';
+                    break; // Не пробуем другие модели, если проблема с авторизацией
+                }
+                
+                lastError = errorMessage;
                 continue; // Пробуем следующую модель
             }
             
@@ -1515,6 +1547,11 @@ async function callOpenAI(userMessage, plantContext, apiKey) {
             return data.choices[0].message.content;
         } catch (error) {
             console.warn(`Model ${model} error:`, error);
+            // Если это ошибка сети или CORS, не пробуем другие модели
+            if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+                lastError = 'Ошибка сети. Проверьте подключение к интернету.';
+                break;
+            }
             lastError = error.message;
             continue; // Пробуем следующую модель
         }
