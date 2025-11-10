@@ -3,12 +3,7 @@ let allPlants = [];
 let plantsCache = new Map();
 let currentPage = 0;
 const PLANTS_PER_PAGE = 20;
-let activeFilters = {
-    plantType: '',
-    light: '',
-    care: ''
-};
-let filteredResults = [];
+// Фильтры удалены
 
 // Функция для переключения секций
 function toggleSection(sectionId) {
@@ -78,8 +73,14 @@ async function loadPlantFiles(category, container) {
         if (category === 'allPlants') {
             displayFiles = files.slice(0, PLANTS_PER_PAGE);
         } else if (category === 'popular') {
-            // Популярные - каждое 10-е растение
-            displayFiles = files.filter((_, i) => i % 10 === 0).slice(0, PLANTS_PER_PAGE);
+            // Популярные - включаем камнеломку (text40.html) и каждое 10-е растение
+            const popularIndices = [40]; // Камнеломка
+            for (let i = 0; i < files.length; i += 10) {
+                if (i !== 40) { // Не дублируем камнеломку
+                    popularIndices.push(i);
+                }
+            }
+            displayFiles = popularIndices.map(i => files[i]).filter(f => f).slice(0, PLANTS_PER_PAGE);
         } else if (category === 'indoor') {
             // Комнатные - первые 100 файлов
             displayFiles = files.slice(0, 100).filter((_, i) => i % 5 === 0).slice(0, PLANTS_PER_PAGE);
@@ -206,9 +207,43 @@ function extractPlantDescription(doc) {
     const h2Elements = doc.querySelectorAll('h2');
     for (const h2 of h2Elements) {
         if (h2.textContent.includes('Ботаническое описание')) {
-            // Ищем параграф после ботанического описания
+            // Ищем strong элемент с описанием после h2
             let nextElement = h2.nextElementSibling;
             while (nextElement) {
+                // Проверяем, есть ли strong элемент в текущем элементе
+                const strong = nextElement.querySelector('strong') || (nextElement.tagName === 'STRONG' ? nextElement : null);
+                if (strong) {
+                    // Получаем весь текст родительского элемента (включая текст после strong)
+                    const parentText = nextElement.textContent.trim();
+                    if (parentText) {
+                        // Извлекаем описание после названия и латинского названия
+                        // Формат: "Название (лат. LatinName) – описание..."
+                        const match = parentText.match(/[–—]\s*(.+)/);
+                        if (match && match[1]) {
+                            let description = match[1].trim();
+                            // Убираем HTML теги <br> и заменяем на пробелы
+                            description = description.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ');
+                            // Убираем вложенные strong элементы из текста
+                            description = description.replace(/\*\*([^*]+)\*\*/g, '$1');
+                            if (description.length > 0) {
+                                return description.substring(0, 120) + (description.length > 120 ? '...' : '');
+                            }
+                        }
+                        // Если нет тире, пытаемся извлечь текст после названия
+                        const strongText = strong.textContent.trim();
+                        const nameMatch = strongText.match(/^([^(]+)\([^)]+\)/);
+                        if (nameMatch) {
+                            // Берем текст после strong элемента
+                            const afterStrong = parentText.substring(parentText.indexOf(strongText) + strongText.length).trim();
+                            if (afterStrong.length > 20) {
+                                let description = afterStrong.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ');
+                                return description.substring(0, 120) + (description.length > 120 ? '...' : '');
+                            }
+                        }
+                    }
+                }
+                
+                // Ищем параграф после ботанического описания
                 if (nextElement.tagName === 'P' && nextElement.textContent.trim()) {
                     let text = nextElement.textContent.trim();
                     // Убираем название растения из начала
@@ -217,14 +252,42 @@ function extractPlantDescription(doc) {
                         return text.substring(0, 120) + (text.length > 120 ? '...' : '');
                     }
                 }
+                
                 nextElement = nextElement.nextElementSibling;
             }
         }
     }
     
-    // Ищем первый параграф после strong
+    // Ищем первый strong элемент и извлекаем текст из родительского элемента
     const strong = doc.querySelector('strong');
     if (strong) {
+        const parent = strong.parentElement;
+        if (parent) {
+            const parentText = parent.textContent.trim();
+            if (parentText) {
+                // Извлекаем описание после названия
+                const match = parentText.match(/[–—]\s*(.+)/);
+                if (match && match[1]) {
+                    let description = match[1].trim();
+                    description = description.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ');
+                    if (description.length > 0) {
+                        return description.substring(0, 120) + (description.length > 120 ? '...' : '');
+                    }
+                }
+                // Если нет тире, извлекаем текст после strong
+                const strongText = strong.textContent.trim();
+                const nameMatch = strongText.match(/^([^(]+)\([^)]+\)/);
+                if (nameMatch) {
+                    const afterStrong = parentText.substring(parentText.indexOf(strongText) + strongText.length).trim();
+                    if (afterStrong.length > 20) {
+                        let description = afterStrong.replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ');
+                        return description.substring(0, 120) + (description.length > 120 ? '...' : '');
+                    }
+                }
+            }
+        }
+        
+        // Ищем параграф после strong
         let nextElement = strong.parentElement?.nextElementSibling;
         while (nextElement) {
             if (nextElement.tagName === 'P' && nextElement.textContent.trim()) {
@@ -647,15 +710,9 @@ let searchTimeout;
 function searchPlants(query) {
     clearTimeout(searchTimeout);
     
-    if (!query || query.length < 2) {
+    if (!query || query.length < 1) {
         // Скрываем результаты поиска
         hideSearchResults();
-        
-        // Если есть активные фильтры, применяем их
-        if (hasActiveFilters()) {
-            applyFilters();
-            return;
-        }
         return;
     }
     
@@ -665,46 +722,82 @@ function searchPlants(query) {
     }, 300);
 }
 
-// Проверка активных фильтров
-function hasActiveFilters() {
-    return activeFilters.plantType !== '' || 
-           activeFilters.light !== '' || 
-           activeFilters.care !== '';
-}
-
-// Выполнение поиска
+// Выполнение поиска (улучшенный, более гибкий)
 async function performSearch(query) {
     const results = [];
-    const queryLower = query.toLowerCase();
+    const queryLower = query.toLowerCase().trim();
+    
+    // Разбиваем запрос на слова для более гибкого поиска
+    const queryWords = queryLower.split(/\s+/).filter(word => word.length > 0);
+    
+    // Функция для подсчета релевантности
+    const calculateRelevance = (plant) => {
+        let score = 0;
+        const titleLower = plant.title.toLowerCase();
+        const descLower = (plant.description || '').toLowerCase();
+        
+        // Точное совпадение названия - высший приоритет
+        if (titleLower === queryLower) {
+            score += 1000;
+        }
+        // Название начинается с запроса
+        else if (titleLower.startsWith(queryLower)) {
+            score += 500;
+        }
+        // Название содержит запрос
+        else if (titleLower.includes(queryLower)) {
+            score += 300;
+        }
+        
+        // Поиск по словам
+        queryWords.forEach(word => {
+            if (titleLower.includes(word)) {
+                score += 100;
+            }
+            if (descLower.includes(word)) {
+                score += 50;
+            }
+        });
+        
+        // Поиск в описании
+        if (descLower.includes(queryLower)) {
+            score += 20;
+        }
+        
+        // Поиск по частичным совпадениям (для опечаток)
+        if (queryLower.length >= 3) {
+            const querySubstr = queryLower.substring(0, Math.min(3, queryLower.length));
+            if (titleLower.includes(querySubstr)) {
+                score += 10;
+            }
+        }
+        
+        return score;
+    };
     
     // Ищем в уже загруженных растениях
     for (const plant of allPlants) {
-        if (plant.title.toLowerCase().includes(queryLower) ||
-            plant.description.toLowerCase().includes(queryLower)) {
-            // Применяем фильтры
-            if (matchesFilters(plant)) {
-                results.push(plant);
-            }
+        const relevance = calculateRelevance(plant);
+        if (relevance > 0) {
+            results.push({ plant, relevance });
         }
     }
     
     // Если результатов мало, загружаем больше файлов
     if (results.length < 10) {
         const files = await getPlantFiles();
-        const filesToLoad = files.slice(allPlants.length, allPlants.length + 50);
+        const filesToLoad = files.slice(allPlants.length, Math.min(allPlants.length + 100, files.length));
         
         for (const file of filesToLoad) {
-            if (results.length >= 20) break;
+            if (results.length >= 50) break;
             
             try {
                 const plant = await loadPlantData(file);
                 if (plant) {
                     allPlants.push(plant);
-                    if (plant.title.toLowerCase().includes(queryLower) ||
-                        plant.description.toLowerCase().includes(queryLower)) {
-                        if (matchesFilters(plant)) {
-                            results.push(plant);
-                        }
+                    const relevance = calculateRelevance(plant);
+                    if (relevance > 0) {
+                        results.push({ plant, relevance });
                     }
                 }
             } catch (error) {
@@ -713,30 +806,30 @@ async function performSearch(query) {
         }
     }
     
-    return results;
+    // Сортируем по релевантности
+    results.sort((a, b) => b.relevance - a.relevance);
+    
+    // Возвращаем только растения (без relevance)
+    return results.map(r => r.plant).slice(0, 50);
 }
 
-// Проверка соответствия фильтрам
-function matchesFilters(plant) {
-    if (activeFilters.plantType && !plant.description.toLowerCase().includes(activeFilters.plantType.toLowerCase())) {
-        return false;
-    }
-    if (activeFilters.light && plant.shortInfo.light && !plant.shortInfo.light.toLowerCase().includes(activeFilters.light.toLowerCase())) {
-        return false;
-    }
-    return true;
-}
+// Фильтры удалены
 
 // Отображение результатов поиска
 function displaySearchResults(results) {
     const searchResultsContainer = document.getElementById('searchResultsContainer');
     const searchResultsBlocks = document.getElementById('searchResultsBlocks');
-    const mainContent = document.querySelector('.main-content');
+    const catalogContainer = document.getElementById('catalogContainer');
     
     if (!searchResultsContainer || !searchResultsBlocks) return;
     
     // Показываем контейнер результатов поиска
     searchResultsContainer.style.display = 'block';
+    
+    // Скрываем каталог
+    if (catalogContainer) {
+        catalogContainer.style.display = 'none';
+    }
     
     // Очищаем и заполняем результатами
     searchResultsBlocks.innerHTML = '';
@@ -759,13 +852,68 @@ function displaySearchResults(results) {
 // Скрытие результатов поиска
 function hideSearchResults() {
     const searchResultsContainer = document.getElementById('searchResultsContainer');
+    const catalogContainer = document.getElementById('catalogContainer');
+    
     if (searchResultsContainer) {
         searchResultsContainer.style.display = 'none';
+    }
+    if (catalogContainer) {
+        catalogContainer.style.display = 'block';
+    }
+}
+
+// Показ категории из leftbar
+function showCategory(category, buttonElement) {
+    // Скрываем результаты поиска
+    hideSearchResults();
+    
+    // Убираем активный класс со всех кнопок
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Добавляем активный класс к выбранной кнопке
+    if (buttonElement) {
+        buttonElement.classList.add('active');
+    }
+    
+    // Прокручиваем к нужной секции
+    const sectionMap = {
+        'allPlants': 'allPlantsSection',
+        'popular': 'popularSection',
+        'indoor': 'indoorSection',
+        'garden': 'gardenSection',
+        'families': 'familiesSection',
+        'care': 'careSection'
+    };
+    
+    const sectionId = sectionMap[category];
+    if (sectionId) {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            // Раскрываем секцию, если она свернута
+            const content = section.querySelector('.section-content');
+            if (content && content.classList.contains('collapsed')) {
+                toggleSection(sectionId);
+            }
+            
+            // Прокручиваем к секции
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 }
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
+    // Загружаем сохраненную позицию и размер чата
+    loadChatPosition();
+    
+    // Инициализируем обработчик изменения размера
+    const resizeHandle = document.getElementById('chatResizeHandle');
+    if (resizeHandle) {
+        resizeHandle.addEventListener('mousedown', startResize);
+    }
+    
     // Поиск
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
@@ -795,7 +943,14 @@ document.addEventListener('DOMContentLoaded', () => {
         welcomeMsg.className = 'chat-msg assistant';
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-        bubble.textContent = 'Здравствуйте! Я помогу вам с вопросами о растениях.';
+        
+        const apiKey = localStorage.getItem('openrouter_api_key') || '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';
+        if (apiKey) {
+            bubble.textContent = 'Здравствуйте! Я помогу вам с вопросами о растениях. У меня есть доступ к базе данных сайта.';
+        } else {
+            bubble.textContent = 'Здравствуйте! Я помогу вам с вопросами о растениях.';
+        }
+        
         welcomeMsg.appendChild(bubble);
         chatMessages.appendChild(welcomeMsg);
     }
@@ -818,56 +973,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Функции фильтров
-function toggleFilters() {
-    const panel = document.getElementById('filtersPanel');
-    if (panel) {
-        panel.classList.toggle('active');
-    }
-}
-
-function applyFilters() {
-    activeFilters.plantType = document.getElementById('plantTypeFilter')?.value || '';
-    activeFilters.light = document.getElementById('lightFilter')?.value || '';
-    activeFilters.care = document.getElementById('careFilter')?.value || '';
-    
-    // Применяем фильтры к результатам поиска
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput && searchInput.value.trim()) {
-        searchPlants(searchInput.value.trim());
-    } else {
-        // Если нет поискового запроса, показываем отфильтрованные результаты
-        filterAllPlants();
-    }
-}
-
-function clearFilters() {
-    activeFilters = {
-        plantType: '',
-        light: '',
-        care: ''
-    };
-    
-    document.getElementById('plantTypeFilter').value = '';
-    document.getElementById('lightFilter').value = '';
-    document.getElementById('careFilter').value = '';
-    
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.value = '';
-    }
-    
-    // Скрываем результаты поиска
-    hideSearchResults();
-}
-
-function filterAllPlants() {
-    const results = allPlants.filter(plant => matchesFilters(plant));
-    displaySearchResults(results);
-}
+// Функции фильтров удалены
 
 // Отправка сообщения в чат
-function sendChatMessage(message) {
+async function sendChatMessage(message) {
     if (!message.trim()) return;
     
     const chatMessages = document.getElementById('chatMessages');
@@ -884,32 +993,499 @@ function sendChatMessage(message) {
     
     chatMessages.scrollTop = chatMessages.scrollHeight;
     
-    // Имитация ответа AI
-    setTimeout(() => {
+    // Проверяем наличие API ключа
+    const apiKey = localStorage.getItem('openrouter_api_key') || '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';
+    
+    if (!apiKey) {
+        // Если нет API ключа, используем простые ответы
+        setTimeout(() => {
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'chat-msg assistant';
+            const aiBubble = document.createElement('div');
+            aiBubble.className = 'bubble';
+            
+            const response = generateAIResponse(message);
+            aiBubble.textContent = response;
+            
+            aiMsg.appendChild(aiBubble);
+            chatMessages.appendChild(aiMsg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, 500);
+        return;
+    }
+    
+    // Показываем индикатор загрузки
+    const loadingMsg = document.createElement('div');
+    loadingMsg.className = 'chat-msg assistant';
+    const loadingBubble = document.createElement('div');
+    loadingBubble.className = 'bubble';
+    loadingBubble.textContent = 'Думаю...';
+    loadingBubble.id = 'loadingMsg';
+    loadingMsg.appendChild(loadingBubble);
+    chatMessages.appendChild(loadingMsg);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    try {
+        // Получаем контекст о растениях
+        const plantContext = await getPlantContext(message);
+        
+        // Отправляем запрос к OpenAI API
+        const response = await callOpenAI(message, plantContext, apiKey);
+        
+        // Удаляем индикатор загрузки
+        loadingMsg.remove();
+        
+        // Показываем ответ
         const aiMsg = document.createElement('div');
         aiMsg.className = 'chat-msg assistant';
         const aiBubble = document.createElement('div');
         aiBubble.className = 'bubble';
-        
-        // Простые ответы на основе ключевых слов
-        const response = generateAIResponse(message);
         aiBubble.textContent = response;
         
         aiMsg.appendChild(aiBubble);
         chatMessages.appendChild(aiMsg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
-    }, 500);
+    } catch (error) {
+        // Удаляем индикатор загрузки
+        loadingMsg.remove();
+        
+        // Показываем ошибку
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'chat-msg assistant';
+        const errorBubble = document.createElement('div');
+        errorBubble.className = 'bubble';
+        errorBubble.style.color = '#d32f2f';
+        errorBubble.textContent = 'Ошибка: ' + (error.message || 'Не удалось получить ответ от ИИ');
+        
+        errorMsg.appendChild(errorBubble);
+        chatMessages.appendChild(errorMsg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 }
 
 // Функция для переключения состояния чата
 function toggleChat() {
     const chatWidget = document.getElementById('aiChatWidget');
     if (chatWidget) {
+        const isCollapsing = !chatWidget.classList.contains('collapsed');
         chatWidget.classList.toggle('collapsed');
+        
+        // Сохраняем размер и позицию перед сворачиванием
+        if (isCollapsing) {
+            const width = chatWidget.offsetWidth;
+            const height = chatWidget.offsetHeight;
+            const rect = chatWidget.getBoundingClientRect();
+            saveChatSize(width, height);
+            saveChatPosition(rect.left, rect.top);
+        }
+        
+        // Скрываем настройки при сворачивании
+        if (isCollapsing) {
+            const settings = document.getElementById('chatApiSettings');
+            if (settings) {
+                settings.style.display = 'none';
+            }
+        }
     }
 }
 
-// Генерация ответа AI
+// Перетаскивание чата
+let isDragging = false;
+let dragOffset = { x: 0, y: 0 };
+
+function startDrag(event) {
+    event.preventDefault();
+    const chatWidget = document.getElementById('aiChatWidget');
+    if (!chatWidget) return;
+    
+    const rect = chatWidget.getBoundingClientRect();
+    dragOffset.x = event.clientX - rect.left;
+    dragOffset.y = event.clientY - rect.top;
+    
+    isDragging = true;
+    chatWidget.style.cursor = 'grabbing';
+    
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', stopDrag);
+}
+
+function onDrag(event) {
+    if (!isDragging) return;
+    
+    const chatWidget = document.getElementById('aiChatWidget');
+    if (!chatWidget) return;
+    
+    const newX = event.clientX - dragOffset.x;
+    const newY = event.clientY - dragOffset.y;
+    
+    // Ограничиваем перемещение границами окна
+    const maxX = window.innerWidth - chatWidget.offsetWidth;
+    const maxY = window.innerHeight - chatWidget.offsetHeight;
+    
+    const constrainedX = Math.max(0, Math.min(newX, maxX));
+    const constrainedY = Math.max(0, Math.min(newY, maxY));
+    
+    chatWidget.style.left = constrainedX + 'px';
+    chatWidget.style.top = constrainedY + 'px';
+    chatWidget.style.right = 'auto';
+    chatWidget.style.bottom = 'auto';
+    
+    // Сохраняем позицию
+    saveChatPosition(constrainedX, constrainedY);
+}
+
+function stopDrag() {
+    isDragging = false;
+    const chatWidget = document.getElementById('aiChatWidget');
+    if (chatWidget) {
+        chatWidget.style.cursor = '';
+    }
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup', stopDrag);
+}
+
+// Изменение размера чата
+let isResizing = false;
+let resizeStartX = 0;
+let resizeStartY = 0;
+let resizeStartWidth = 0;
+let resizeStartHeight = 0;
+
+function startResize(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const chatWidget = document.getElementById('aiChatWidget');
+    if (!chatWidget) return;
+    
+    isResizing = true;
+    resizeStartX = event.clientX;
+    resizeStartY = event.clientY;
+    resizeStartWidth = chatWidget.offsetWidth;
+    resizeStartHeight = chatWidget.offsetHeight;
+    
+    document.addEventListener('mousemove', onResize);
+    document.addEventListener('mouseup', stopResize);
+}
+
+function onResize(event) {
+    if (!isResizing) return;
+    
+    const chatWidget = document.getElementById('aiChatWidget');
+    if (!chatWidget) return;
+    
+    const deltaX = event.clientX - resizeStartX;
+    const deltaY = event.clientY - resizeStartY;
+    
+    const newWidth = Math.max(300, Math.min(800, resizeStartWidth + deltaX));
+    const newHeight = Math.max(200, Math.min(window.innerHeight - 100, resizeStartHeight - deltaY));
+    
+    chatWidget.style.width = newWidth + 'px';
+    chatWidget.style.height = newHeight + 'px';
+    chatWidget.style.maxHeight = 'none';
+    
+    // Сохраняем размер
+    saveChatSize(newWidth, newHeight);
+}
+
+function stopResize() {
+    isResizing = false;
+    document.removeEventListener('mousemove', onResize);
+    document.removeEventListener('mouseup', stopResize);
+}
+
+// Сохранение и загрузка позиции и размера
+function saveChatPosition(x, y) {
+    localStorage.setItem('chatPosition', JSON.stringify({ x, y }));
+}
+
+function saveChatSize(width, height) {
+    localStorage.setItem('chatSize', JSON.stringify({ width, height }));
+}
+
+function loadChatPosition() {
+    const chatWidget = document.getElementById('aiChatWidget');
+    if (!chatWidget) return;
+    
+    const savedPosition = localStorage.getItem('chatPosition');
+    if (savedPosition) {
+        try {
+            const { x, y } = JSON.parse(savedPosition);
+            chatWidget.style.left = x + 'px';
+            chatWidget.style.top = y + 'px';
+            chatWidget.style.right = 'auto';
+            chatWidget.style.bottom = 'auto';
+        } catch (e) {
+            console.error('Error loading chat position:', e);
+        }
+    }
+    
+    const savedSize = localStorage.getItem('chatSize');
+    if (savedSize) {
+        try {
+            const { width, height } = JSON.parse(savedSize);
+            chatWidget.style.width = width + 'px';
+            chatWidget.style.height = height + 'px';
+            chatWidget.style.maxHeight = 'none';
+        } catch (e) {
+            console.error('Error loading chat size:', e);
+        }
+    }
+}
+
+// Переключение настроек API
+function toggleApiSettings(event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    const settings = document.getElementById('chatApiSettings');
+    if (settings) {
+        settings.style.display = settings.style.display === 'none' ? 'block' : 'none';
+        
+        // Загружаем сохраненный ключ
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        if (apiKeyInput) {
+            const savedKey = localStorage.getItem('openrouter_api_key') || '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';
+            if (savedKey) {
+                apiKeyInput.value = savedKey;
+            }
+        }
+    }
+}
+
+// Сохранение API ключа
+function saveApiKey() {
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    if (apiKeyInput) {
+        const apiKey = apiKeyInput.value.trim();
+        if (apiKey) {
+            localStorage.setItem('openrouter_api_key', apiKey);
+            showApiStatus('API ключ сохранен', 'success');
+        } else {
+            localStorage.removeItem('openrouter_api_key');
+            showApiStatus('API ключ удален', 'info');
+        }
+    }
+}
+
+// Проверка API ключа
+async function testApiKey() {
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    if (!apiKeyInput) return;
+    
+    const apiKey = apiKeyInput.value.trim();
+    if (!apiKey) {
+        showApiStatus('Введите API ключ', 'error');
+        return;
+    }
+    
+    showApiStatus('Проверяю...', 'info');
+    
+    try {
+        const response = await fetch('https://openrouter.ai/api/v1/models', {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`
+            }
+        });
+        
+        if (response.ok) {
+            showApiStatus('API ключ действителен ✓', 'success');
+            localStorage.setItem('openrouter_api_key', apiKey);
+        } else {
+            showApiStatus('Неверный API ключ', 'error');
+        }
+    } catch (error) {
+        showApiStatus('Ошибка проверки: ' + error.message, 'error');
+    }
+}
+
+// Показ статуса API
+function showApiStatus(message, type) {
+    const statusDiv = document.getElementById('apiStatus');
+    if (statusDiv) {
+        statusDiv.textContent = message;
+        statusDiv.className = 'api-status ' + type;
+        setTimeout(() => {
+            statusDiv.textContent = '';
+            statusDiv.className = 'api-status';
+        }, 3000);
+    }
+}
+
+// Получение контекста о растениях для промпта
+async function getPlantContext(userMessage) {
+    const msg = userMessage.toLowerCase();
+    const context = [];
+    const words = msg.split(/\s+/).filter(w => w.length > 2);
+    
+    // Ищем упоминания растений по названию
+    for (const plant of allPlants) {
+        const plantNameLower = plant.title.toLowerCase();
+        
+        // Проверяем точное совпадение или частичное
+        if (words.some(word => plantNameLower.includes(word)) || 
+            plantNameLower.split(' ').some(plantWord => words.includes(plantWord))) {
+            
+            // Если найдено точное совпадение, загружаем полную информацию
+            let fullInfo = plant.description;
+            if (plant.filename && context.length < 2) {
+                try {
+                    const plantData = await loadPlantData(plant.filename);
+                    if (plantData && plantData.fullContent) {
+                        // Извлекаем текст из HTML
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(plantData.fullContent, 'text/html');
+                        const paragraphs = doc.querySelectorAll('p');
+                        let fullText = '';
+                        paragraphs.forEach(p => {
+                            const text = p.textContent.trim();
+                            if (text.length > 20) {
+                                fullText += text + ' ';
+                            }
+                        });
+                        if (fullText.length > 0) {
+                            fullInfo = fullText.substring(0, 500) + '...';
+                        }
+                    }
+                } catch (e) {
+                    // Используем описание по умолчанию
+                }
+            }
+            
+            context.push({
+                name: plant.title,
+                description: fullInfo,
+                filename: plant.filename
+            });
+            
+            // Ограничиваем количество для промпта
+            if (context.length >= 3) break;
+        }
+    }
+    
+    // Если не найдено конкретных растений, добавляем общую информацию
+    if (context.length === 0 && allPlants.length > 0) {
+        // Добавляем несколько популярных растений для контекста
+        const popularPlants = allPlants.slice(0, 2);
+        popularPlants.forEach(plant => {
+            context.push({
+                name: plant.title,
+                description: plant.description.substring(0, 150) + '...'
+            });
+        });
+    }
+    
+    return context;
+}
+
+// Вызов OpenRouter API
+async function callOpenAI(userMessage, plantContext, apiKey) {
+    // Формируем системный промпт с контекстом
+    let systemPrompt = `Ты помощник по уходу за растениями. Ты помогаешь пользователям с вопросами о растениях, их выращивании, уходе, поливе, освещении и других аспектах садоводства и комнатного цветоводства. Отвечай на русском языке, будь дружелюбным и информативным. Используй информацию из базы данных о растениях, если она доступна.`;
+    
+    // Добавляем контекст о растениях
+    if (plantContext.length > 0) {
+        systemPrompt += '\n\nИнформация о растениях из базы данных сайта:\n';
+        plantContext.forEach((ctx, index) => {
+            if (ctx.name) {
+                systemPrompt += `${index + 1}. ${ctx.name}: ${ctx.description}\n`;
+            }
+        });
+        systemPrompt += '\nИспользуй эту информацию для ответов на вопросы пользователя.';
+    } else if (allPlants.length > 0) {
+        systemPrompt += `\n\nВ базе данных сайта есть информация о ${allPlants.length} растениях. Если пользователь спрашивает о конкретном растении, попробуй найти его в базе или дай общий совет.`;
+    }
+    
+    // Получаем историю сообщений из чата
+    const chatHistory = getChatHistory();
+    
+    // Формируем сообщения для API
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        ...chatHistory.slice(-8), // Последние 8 сообщений для контекста (чтобы не превысить лимит токенов)
+        { role: 'user', content: userMessage }
+    ];
+    
+    // Список моделей для попытки (от более предпочтительных к менее)
+    const models = [
+        'openai/gpt-3.5-turbo',
+        'gpt-3.5-turbo',
+        'meta-llama/llama-3.2-3b-instruct:free',
+        'anthropic/claude-3-haiku',
+        'openai/gpt-4o-mini'
+    ];
+    
+    let lastError = null;
+    
+    // Пробуем каждую модель
+    for (const model of models) {
+        try {
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                    'HTTP-Referer': window.location.origin || 'https://localhost',
+                    'X-Title': 'Green Library'
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 600
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                console.warn(`Model ${model} failed:`, error);
+                lastError = error.error?.message || error.message || `HTTP ${response.status}`;
+                continue; // Пробуем следующую модель
+            }
+            
+            const data = await response.json();
+            
+            // Проверяем наличие ответа
+            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                console.warn(`Model ${model} returned unexpected format:`, data);
+                continue; // Пробуем следующую модель
+            }
+            
+            return data.choices[0].message.content;
+        } catch (error) {
+            console.warn(`Model ${model} error:`, error);
+            lastError = error.message;
+            continue; // Пробуем следующую модель
+        }
+    }
+    
+    // Если все модели не сработали, выбрасываем ошибку
+    throw new Error(lastError || 'Все модели недоступны');
+}
+
+// Получение истории чата
+function getChatHistory() {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) return [];
+    
+    const history = [];
+    const messages = chatMessages.querySelectorAll('.chat-msg');
+    
+    messages.forEach(msg => {
+        const bubble = msg.querySelector('.bubble');
+        if (bubble && bubble.id !== 'loadingMsg') {
+            const role = msg.classList.contains('user') ? 'user' : 'assistant';
+            const content = bubble.textContent.trim();
+            if (content) {
+                history.push({ role, content });
+            }
+        }
+    });
+    
+    return history;
+}
+
+// Генерация ответа AI (fallback, если нет API ключа)
 function generateAIResponse(message) {
     const msg = message.toLowerCase();
     
@@ -944,7 +1520,7 @@ function generateAIResponse(message) {
         }
     }
     
-    return 'Я могу помочь вам с вопросами о поливе, освещении, удобрении, пересадке растений и многом другом. Задайте вопрос!';
+    return 'Я могу помочь вам с вопросами о поливе, освещении, удобрении, пересадке растений и многом другом.';
 }
 
 // Функция для навигации по содержанию в HTML файлах
