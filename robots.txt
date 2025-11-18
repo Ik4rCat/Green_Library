@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /cart.html
 
 Sitemap: https://ik4rcat.github.io/Green_Library/sitemap.xml
